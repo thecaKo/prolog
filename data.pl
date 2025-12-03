@@ -384,3 +384,165 @@ melhor_decisao_impacto(P, Impacto, Acao, Meses) :-
         (decisao(P, A, M), decisao_prioridade(A, Prioridade, Impacto)),
         Lista),
     sort(Lista, [(_, Acao, Meses)|_]).
+
+% ================================
+% MODO EXPLICATIVO DE DECISÕES
+% ================================
+
+% Explicar por que uma certa decisão está (ou não) disponível
+
+explicar_decisao(P, Acao) :-
+    \+ decisao(P, Acao, _),
+    format('Nenhuma decisão ~w está disponível para ~w (condições não satisfeitas).~n', [Acao, P]),
+    !,
+    fail.
+
+% Explicação específica: LOCKDOWN PARCIAL
+explicar_decisao(P, lockdown_parcial) :-
+    decisao(P, lockdown_parcial, Meses),
+    decisao_prioridade(lockdown_parcial, Prioridade, Impacto),
+    write('Decisão: lockdown_parcial'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_saude(P, NivelSaude, TendSaude, SevSaude, ImpSaude, VarSaude),
+    format('  - Crise de saúde em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [NivelSaude, TendSaude, SevSaude, ImpSaude, VarSaude]),
+    apoio_populacao(P, Apoio),
+    format('  - Apoio da população em nível ~w (permite medidas restritivas).~n', [Apoio]),
+    nl.
+
+% Explicação específica: INTERVENÇÃO ECONÔMICA
+explicar_decisao(P, intervencao_economica) :-
+    decisao(P, intervencao_economica, Meses),
+    decisao_prioridade(intervencao_economica, Prioridade, Impacto),
+    write('Decisão: intervencao_economica'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_economica(P, EN, ET, ES, EI, EV),
+    format('  - Crise econômica em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [EN, ET, ES, EI, EV]),
+    reservas(P, Res),
+    format('  - Reservas em nível ~w (permite intervenção mais forte).~n', [Res]),
+    nl.
+
+% Explicação específica: PACOTE EMERGENCIAL
+explicar_decisao(P, pacote_emergencial) :-
+    decisao(P, pacote_emergencial, Meses),
+    decisao_prioridade(pacote_emergencial, Prioridade, Impacto),
+    write('Decisão: pacote_emergencial'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_economica(P, EN, ET, ES, EI, EV),
+    format('  - Crise econômica em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [EN, ET, ES, EI, EV]),
+    reservas(P, Res),
+    format('  - Reservas em nível ~w (limitadas, exige pacote emergencial).~n', [Res]),
+    nl.
+
+% Explicação específica: REFORÇO DE HOSPITAIS
+explicar_decisao(P, reforco_hospitais) :-
+    decisao(P, reforco_hospitais, Meses),
+    decisao_prioridade(reforco_hospitais, Prioridade, Impacto),
+    write('Decisão: reforco_hospitais'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_saude(P, SN, ST, SS, SI, SV),
+    format('  - Crise de saúde em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [SN, ST, SS, SI, SV]),
+    infraestrutura(P, Infra),
+    format('  - Infraestrutura em nível ~w (precisa reforço hospitalar).~n', [Infra]),
+    nl.
+
+% Explicação específica: CHAMAR ONU
+explicar_decisao(P, chamar_onu) :-
+    decisao(P, chamar_onu, Meses),
+    decisao_prioridade(chamar_onu, Prioridade, Impacto),
+    write('Decisão: chamar_onu'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_saude(P, SN, ST, SS, SI, SV),
+    format('  - Crise de saúde em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [SN, ST, SS, SI, SV]),
+    infraestrutura(P, Infra),
+    format('  - Infraestrutura em nível ~w (insuficiente, requer apoio internacional).~n', [Infra]),
+    nl.
+
+% Explicação específica: REFORÇO POLICIAL
+explicar_decisao(P, reforco_policial) :-
+    decisao(P, reforco_policial, Meses),
+    decisao_prioridade(reforco_policial, Prioridade, Impacto),
+    write('Decisão: reforco_policial'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_seguranca(P, SeN, SeT, SeS, SeI, SeV),
+    format('  - Crise de segurança em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [SeN, SeT, SeS, SeI, SeV]),
+    apoio_populacao(P, Apoio),
+    format('  - Apoio da população em nível ~w (legitima reforço policial).~n', [Apoio]),
+    nl.
+
+% Explicação específica: DESLOCAR TROPAS
+explicar_decisao(P, deslocar_tropas) :-
+    decisao(P, deslocar_tropas, Meses),
+    decisao_prioridade(deslocar_tropas, Prioridade, Impacto),
+    write('Decisão: deslocar_tropas'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    crise_seguranca(P, SeN, SeT, SeS, SeI, SeV),
+    format('  - Crise de segurança em nível ~w, tendência ~w, severidade ~w, impacto ~w, variação ~w.~n',
+           [SeN, SeT, SeS, SeI, SeV]),
+    apoio_populacao(P, Apoio),
+    format('  - Apoio da população em nível ~w (aceita presença de tropas).~n', [Apoio]),
+    nl.
+
+% Explicação específica: REFORMA DE INFRAESTRUTURA
+explicar_decisao(P, reforma_infraestrutura) :-
+    decisao(P, reforma_infraestrutura, Meses),
+    decisao_prioridade(reforma_infraestrutura, Prioridade, Impacto),
+    write('Decisão: reforma_infraestrutura'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    infraestrutura(P, Infra),
+    format('  - Infraestrutura em nível ~w (demanda reforma estrutural).~n', [Infra]),
+    nl.
+
+% Explicação específica: PLANO DE ESTABILIZAÇÃO
+explicar_decisao(P, plano_estabilizacao) :-
+    decisao(P, plano_estabilizacao, Meses),
+    decisao_prioridade(plano_estabilizacao, Prioridade, Impacto),
+    write('Decisão: plano_estabilizacao'), nl,
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    write('Motivos:'), nl,
+    (   crise_grave(P)
+    ->  write('  - Situação classificada como crise grave (econômica/saúde/segurança em nível alto).'), nl
+    ;   true
+    ),
+    apoio_populacao(P, Apoio),
+    format('  - Apoio da população em nível ~w (necessário para medidas de estabilização).~n', [Apoio]),
+    nl.
+
+% Explicação genérica para demais decisões
+explicar_decisao(P, Outra) :-
+    decisao(P, Outra, Meses),
+    decisao_prioridade(Outra, Prioridade, Impacto),
+    format('Decisão: ~w~n', [Outra]),
+    format('Duração estimada: ~w meses~n', [Meses]),
+    format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
+    nl.
+
+% Explicar diretamente a melhor decisão atual de um país
+explicar_melhor_decisao(P) :-
+    (   melhor_decisao(P, nenhuma, 0)
+    ->  format('Nenhuma decisão disponível para ~w.~n', [P])
+    ;   melhor_decisao(P, Acao, _),
+        explicar_decisao(P, Acao)
+    ).
