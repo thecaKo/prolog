@@ -6,15 +6,11 @@ menu :-
     write('========================================'), nl,
     write('    SISTEMA DE DECISÃO - MENU PRINCIPAL'), nl,
     write('========================================'), nl, nl,
-    write('1. Manual - Configurar país manualmente'), nl,
-    write('2. Backtracking - Explorar cenários para uma ação'), nl,
-    write('3. Ver melhor decisão'), nl,
-    write('4. Listar decisões por impacto'), nl,
-    write('5. Explicar decisão'), nl,
-    write('6. Avaliar país'), nl,
-    write('7. Comparar países'), nl,
-    write('8. Exemplos pré-configurados'), nl,
-    write('9. Ajuda'), nl,
+    write('1. Manual (Livre) - Comandos brutos'), nl,
+    write('2. Assistência - Configurar país passo a passo'), nl,
+    write('3. Listar decisões'), nl,
+    write('4. Melhor decisão'), nl,
+    write('5. Perfil país'), nl,
     write('0. Sair'), nl, nl,
     write('Escolha uma opção:'), nl,
     read(Opcao),
@@ -26,15 +22,11 @@ menu :-
     ;   write('~nSaindo...'), nl
     ).
 
-processar_opcao(1) :- menu_manual.
-processar_opcao(2) :- menu_backtracking.
-processar_opcao(3) :- menu_melhor_decisao.
-processar_opcao(4) :- menu_listar_por_impacto.
-processar_opcao(5) :- menu_explicar_decisao.
-processar_opcao(6) :- menu_avaliar_pais.
-processar_opcao(7) :- menu_comparar_paises.
-processar_opcao(8) :- menu_exemplos.
-processar_opcao(9) :- menu_ajuda.
+processar_opcao(1) :- menu_manual_livre.
+processar_opcao(2) :- menu_assistencia.
+processar_opcao(3) :- menu_listar_decisoes.
+processar_opcao(4) :- menu_melhor_decisao_completo.
+processar_opcao(5) :- menu_perfil_pais.
 processar_opcao(0) :- true.
 processar_opcao(_) :-
     write('Opção inválida!'), nl.
@@ -42,10 +34,41 @@ processar_opcao(_) :-
 limpar_tela :-
     nl, nl, nl, nl, nl.
 
-menu_manual :-
+% Opção 1: Manual (Livre) - Comandos brutos
+menu_manual_livre :-
     limpar_tela,
     write('========================================'), nl,
-    write('MANUAL - Configurar País (Incremental)'), nl,
+    write('MANUAL (LIVRE) - Comandos Brutos'), nl,
+    write('========================================'), nl, nl,
+    write('Digite comandos Prolog diretamente.'), nl,
+    write('Exemplos:'), nl,
+    write('  assertz(crise_economica(brasil, alto, alta, critica, alto, explosiva)).'), nl,
+    write('  assertz(reservas(brasil, alto)).'), nl,
+    write('  melhor_decisao(brasil, A, M).'), nl,
+    write(''), nl,
+    write('Digite "voltar" para retornar ao menu.'), nl,
+    nl,
+    loop_comandos_livres.
+
+loop_comandos_livres :-
+    write('?- '),
+    read(Comando),
+    (   Comando == voltar
+    ->  true
+    ;   (   catch(call(Comando), E, 
+            (write('Erro: '), write(E), nl))
+        ->  true
+        ;   write('Falhou ou não retornou verdadeiro.'), nl
+        ),
+        nl,
+        loop_comandos_livres
+    ).
+
+% Opção 2: Assistência - Configurar país passo a passo
+menu_assistencia :-
+    limpar_tela,
+    write('========================================'), nl,
+    write('ASSISTÊNCIA - Configurar País'), nl,
     write('========================================'), nl, nl,
     
     write('Digite o nome do país:'), nl,
@@ -211,7 +234,8 @@ menu_backtracking :-
     nl.
 
 
-menu_melhor_decisao :-
+% Opção 4: Melhor decisão com explicação
+menu_melhor_decisao_completo :-
     limpar_tela,
     write('========================================'), nl,
     write('MELHOR DECISÃO'), nl,
@@ -223,43 +247,72 @@ menu_melhor_decisao :-
     
     (   coletar_dados_faltantes(Pais, Faltantes),
         Faltantes = []
-    ->  % País tem todos os dados, mostra melhor decisão
-        executar_consulta(Pais, melhor_decisao),
-        nl
-    ;   % País não tem dados completos
-        format('País ~w não possui todos os dados configurados.~n', [Pais]),
-        write('Use a opção 1 (Manual) para configurar o país primeiro.'), nl,
+    ->  (   melhor_decisao(Pais, Acao, Meses)
+        ->  (   Acao == nenhuma
+            ->  format('Análise para ~w:~n', [Pais]),
+                write('  Nenhuma ação de emergência é necessária no momento.'), nl,
+                write('  O país está em situação estável.'), nl
+            ;   format('Melhor decisão para ~w:~n', [Pais]),
+                format('  Ação: ~w~n', [Acao]),
+                format('  Duração: ~w meses~n', [Meses]),
+                (   decisao_prioridade(Acao, Prioridade, Impacto)
+                ->  format('  Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto])
+                ;   true
+                ),
+                nl,
+                write('=== EXPLICAÇÃO ==='), nl,
+                explicar_decisao(Pais, Acao)
+            )
+        ;   write('Nenhuma decisão disponível ou dados incompletos.'), nl
+        )
+    ;   format('País ~w não possui todos os dados configurados.~n', [Pais]),
+        write('Use a opção 2 (Assistência) para configurar o país primeiro.'), nl,
         nl
     ).
 
-menu_listar_por_impacto :-
+% Opção 3: Listar decisões
+menu_listar_decisoes :-
     limpar_tela,
     write('========================================'), nl,
-    write('LISTAR DECISÕES POR IMPACTO'), nl,
+    write('LISTAR DECISÕES'), nl,
     write('========================================'), nl, nl,
     write('Digite o nome do país:'), nl,
     read(Pais),
     nl,
     
-    listar_decisoes_por_impacto(Pais),
-    nl.
+    (   coletar_dados_faltantes(Pais, Faltantes),
+        Faltantes = []
+    ->  listar_decisoes_com_impacto(Pais),
+        nl
+    ;   format('País ~w não possui todos os dados configurados.~n', [Pais]),
+        write('Use a opção 2 (Assistência) para configurar o país primeiro.'), nl,
+        nl
+    ).
 
-menu_explicar_decisao :-
+% Opção 5: Perfil país - Mostrar o dict
+menu_perfil_pais :-
     limpar_tela,
     write('========================================'), nl,
-    write('EXPLICAR DECISÃO'), nl,
+    write('PERFIL DO PAÍS'), nl,
     write('========================================'), nl, nl,
     write('Digite o nome do país:'), nl,
     read(Pais),
-    write('Digite o nome da ação:'), nl,
-    read(Acao),
     nl,
     
-    (   explicar_decisao(Pais, Acao)
-    ->  true
-    ;   format('Decisão ~w não está disponível para ~w.~n', [Acao, Pais])
-    ),
-    nl.
+    (   coletar_dados_faltantes(Pais, Faltantes),
+        Faltantes = []
+    ->  (   perfil_pais(Pais, Perfil)
+        ->  write('=== PERFIL COMPLETO DO PAÍS ==='), nl, nl,
+            write(Perfil), nl, nl
+        ;   write('Erro ao obter perfil do país.'), nl
+        )
+    ;   format('País ~w não possui todos os dados configurados.~n', [Pais]),
+        write('Dados faltantes: '),
+        coletar_dados_faltantes(Pais, Faltantes),
+        write(Faltantes), nl,
+        write('Use a opção 2 (Assistência) para configurar o país primeiro.'), nl,
+        nl
+    ).
 
 menu_avaliar_pais :-
     limpar_tela,
