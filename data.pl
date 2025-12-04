@@ -93,6 +93,13 @@ decisao_prioridade(reforma_infraestrutura, 13, baixo).
 decisao_prioridade(auxilio_financeiro, 14, baixo).
 decisao_prioridade(programa_social, 15, baixo).
 decisao_prioridade(controle_de_precos, 16, medio).
+decisao_prioridade(estado_de_emergencia, 1, alto).
+decisao_prioridade(estado_de_calamidade, 1, alto).
+decisao_prioridade(medidas_preventivas, 8, baixo).
+decisao_prioridade(plano_recuperacao_gradual, 7, medio).
+decisao_prioridade(pacote_mega_emergencial, 2, alto).
+decisao_prioridade(intervencao_multipla, 1, alto).
+decisao_prioridade(lockdown_total, 1, alto).
 
 
 % Cria um dicicionario com as informacoes do pais
@@ -198,6 +205,318 @@ decisao(P, plano_estabilizacao, 6) :-
     crise_grave(P),
     apoio_alto(P).
 
+
+decisao(P, estado_de_emergencia, 1) :-
+    score_pais(P, Score),
+    Score >= 50,
+    Score < 60.
+
+decisao(P, estado_de_calamidade, 1) :-
+    score_pais(P, Score),
+    Score >= 60.
+
+decisao(P, medidas_preventivas, 8) :-
+    score_pais(P, Score),
+    Score >= 25,
+    Score < 35,
+    \+ crise_grave(P).
+
+decisao(P, plano_recuperacao_gradual, 7) :-
+    score_pais(P, Score),
+    Score >= 35,
+    Score < 45,
+    reservas_altas(P).
+
+decisao(P, pacote_mega_emergencial, 2) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    CE.score >= 15,
+    reservas_baixas(P).
+
+decisao(P, intervencao_multipla, 1) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    get_dict(crise_saude, Perfil, CS),
+    get_dict(crise_seguranca, Perfil, CSe),
+    get_dict(crise_social, Perfil, CSo),
+    SomaCrises is CE.score + CS.score + CSe.score + CSo.score,
+    SomaCrises >= 50.
+
+decisao(P, lockdown_total, 1) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_saude, Perfil, CS),
+    CS.score >= 16,
+    apoio_alto(P).
+
+
+urgencia_critica(P) :-
+    score_pais(P, Score),
+    Score >= 50.
+
+urgencia_alta(P) :-
+    score_pais(P, Score),
+    Score >= 35,
+    Score < 50.
+
+urgencia_media(P) :-
+    score_pais(P, Score),
+    Score >= 20,
+    Score < 35.
+
+urgencia_baixa(P) :-
+    score_pais(P, Score),
+    Score < 20.
+
+pior_que(P1, P2) :-
+    score_pais(P1, Score1),
+    score_pais(P2, Score2),
+    Score1 > Score2.
+
+melhor_que(P1, P2) :-
+    score_pais(P1, Score1),
+    score_pais(P2, Score2),
+    Score1 < Score2.
+
+situacao_similar(P1, P2) :-
+    score_pais(P1, Score1),
+    score_pais(P2, Score2),
+    Diferenca is abs(Score1 - Score2),
+    Diferenca =< 5.
+
+
+crise_dominante(P, TipoCrise) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    get_dict(crise_saude, Perfil, CS),
+    get_dict(crise_seguranca, Perfil, CSe),
+    get_dict(crise_social, Perfil, CSo),
+    findall((Score, Tipo), (
+        (Score = CE.score, Tipo = economia);
+        (Score = CS.score, Tipo = saude);
+        (Score = CSe.score, Tipo = seguranca);
+        (Score = CSo.score, Tipo = social)
+    ), Crises),
+    sort(Crises, CrisesOrdenadas),
+    reverse(CrisesOrdenadas, [(MaiorScore, TipoCrise) | _]).
+
+crise_critica(P, TipoCrise) :-
+    perfil_pais(P, Perfil),
+    (
+        (get_dict(crise_economica, Perfil, CE), CE.score >= 15, TipoCrise = economia);
+        (get_dict(crise_saude, Perfil, CS), CS.score >= 15, TipoCrise = saude);
+        (get_dict(crise_seguranca, Perfil, CSe), CSe.score >= 15, TipoCrise = seguranca);
+        (get_dict(crise_social, Perfil, CSo), CSo.score >= 15, TipoCrise = social)
+    ).
+
+contar_crises_criticas(P, NumCrises) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    get_dict(crise_saude, Perfil, CS),
+    get_dict(crise_seguranca, Perfil, CSe),
+    get_dict(crise_social, Perfil, CSo),
+    findall(Tipo, (
+        (CE.score >= 15, Tipo = economia);
+        (CS.score >= 15, Tipo = saude);
+        (CSe.score >= 15, Tipo = seguranca);
+        (CSo.score >= 15, Tipo = social)
+    ), ListaCrises),
+    length(ListaCrises, NumCrises).
+
+multiplas_crises_criticas(P, NumCrises) :-
+    contar_crises_criticas(P, NumCrises),
+    NumCrises >= 2.
+
+prioridade_por_score(P, Prioridade) :-
+    score_pais(P, Score),
+    Score >= 50, Prioridade = 1, !.
+prioridade_por_score(P, Prioridade) :-
+    score_pais(P, Score),
+    Score >= 40, Score < 50, Prioridade = 2, !.
+prioridade_por_score(P, Prioridade) :-
+    score_pais(P, Score),
+    Score >= 30, Score < 40, Prioridade = 3, !.
+prioridade_por_score(P, Prioridade) :-
+    score_pais(P, Score),
+    Score >= 20, Score < 30, Prioridade = 4, !.
+prioridade_por_score(P, Prioridade) :-
+    score_pais(P, Score),
+    Score < 20, Prioridade = 5.
+
+alerta_vermelho(P) :-
+    score_pais(P, Score),
+    Score >= 50.
+
+alerta_laranja(P) :-
+    score_pais(P, Score),
+    Score >= 35,
+    Score < 50.
+
+alerta_amarelo(P) :-
+    score_pais(P, Score),
+    Score >= 20,
+    Score < 35.
+
+alerta_verde(P) :-
+    score_pais(P, Score),
+    Score < 20.
+
+acima_media_critica(P) :-
+    score_pais(P, Score),
+    Score >= 38.
+
+abaixo_media(P) :-
+    score_pais(P, Score),
+    Score =< 20.
+
+zona_risco(P) :-
+    score_pais(P, Score),
+    Score >= 30,
+    Score < 40.
+
+zona_segura(P) :-
+    score_pais(P, Score),
+    Score < 15.
+
+valor_tendencia_piora(alta, 3).
+valor_tendencia_piora(estavel, 1).
+valor_tendencia_piora(queda, 0).
+
+valor_variacao_piora(explosiva, 4).
+valor_variacao_piora(ascendente, 2).
+valor_variacao_piora(estavel, 0).
+valor_variacao_piora(decrescente, 0).
+
+score_tendencia_piora(P, ScoreTendencia) :-
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    get_dict(crise_saude, Perfil, CS),
+    get_dict(crise_seguranca, Perfil, CSe),
+    get_dict(crise_social, Perfil, CSo),
+    valor_tendencia_piora(CE.tendencia, TendenciaEc),
+    valor_tendencia_piora(CS.tendencia, TendenciaSaude),
+    valor_tendencia_piora(CSe.tendencia, TendenciaSeg),
+    valor_tendencia_piora(CSo.tendencia, TendenciaSoc),
+    valor_variacao_piora(CE.variacao, VarEc),
+    valor_variacao_piora(CS.variacao, VarSaude),
+    valor_variacao_piora(CSe.variacao, VarSeg),
+    valor_variacao_piora(CSo.variacao, VarSoc),
+    ScoreTendencia is TendenciaEc + TendenciaSaude + TendenciaSeg + TendenciaSoc + VarEc + VarSaude + VarSeg + VarSoc.
+
+fator_reservas(baixo, 3).
+fator_reservas(medio, 1).
+fator_reservas(alto, 0).
+
+fator_infraestrutura(ruim, 3).
+fator_infraestrutura(media, 1).
+fator_infraestrutura(boa, 0).
+
+fator_apoio(baixo, 2).
+fator_apoio(medio, 1).
+fator_apoio(alto, 0).
+
+fator_recursos(P, Fator) :-
+    reservas(P, Res),
+    infraestrutura(P, Infra),
+    apoio_populacao(P, Apoio),
+    fator_reservas(Res, F1),
+    fator_infraestrutura(Infra, F2),
+    fator_apoio(Apoio, F3),
+    Fator is F1 + F2 + F3.
+
+fator_decisoes_disponiveis(P, Fator) :-
+    findall(Prioridade, (
+        decisao(P, Acao, _),
+        decisao_prioridade(Acao, Prioridade, _)
+    ), Prioridades),
+    (Prioridades = [] -> Fator = 10;
+     sort(Prioridades, PrioridadesOrdenadas),
+     PrioridadesOrdenadas = [MinPrioridade | _],
+     (MinPrioridade =< 3 -> Fator = 0;
+      MinPrioridade =< 6 -> Fator = 2;
+      MinPrioridade =< 10 -> Fator = 5;
+      Fator = 8)
+    ).
+
+score_sucumbencia(P, ScoreSucumbencia) :-
+    score_pais(P, ScoreAtual),
+    score_tendencia_piora(P, ScoreTendencia),
+    fator_recursos(P, FatorRecursos),
+    fator_decisoes_disponiveis(P, FatorDecisoes),
+    (multiplas_crises_criticas(P, NumCrises) -> 
+        (NumCrises >= 2 -> FatorMultiplas = 5; FatorMultiplas = 0)
+    ; FatorMultiplas = 0),
+    ScoreSucumbencia is ScoreAtual + ScoreTendencia + FatorRecursos + FatorDecisoes + FatorMultiplas.
+
+qual_vai_sucumbir_daqui_cinco_ano(P1, P2) :-
+    (score_sucumbencia(P1, Score1) -> true; Score1 = 0),
+    (score_sucumbencia(P2, Score2) -> true; Score2 = 0),
+    (score_pais(P1, ScoreAtual1) -> true; ScoreAtual1 = 0),
+    (score_pais(P2, ScoreAtual2) -> true; ScoreAtual2 = 0),
+    (score_tendencia_piora(P1, Tendencia1) -> true; Tendencia1 = 0),
+    (score_tendencia_piora(P2, Tendencia2) -> true; Tendencia2 = 0),
+    (fator_recursos(P1, FatorRec1) -> true; FatorRec1 = 0),
+    (fator_recursos(P2, FatorRec2) -> true; FatorRec2 = 0),
+    (fator_decisoes_disponiveis(P1, FatorDec1) -> true; FatorDec1 = 10),
+    (fator_decisoes_disponiveis(P2, FatorDec2) -> true; FatorDec2 = 10),
+    (contar_crises_criticas(P1, NumCrises1) -> true; NumCrises1 = 0),
+    (contar_crises_criticas(P2, NumCrises2) -> true; NumCrises2 = 0),
+    nl,
+    write('========================================'), nl,
+    write('  ANÁLISE DE SUCUMBÊNCIA (5 ANOS)'), nl,
+    write('========================================'), nl, nl,
+    format('PAÍS 1: ~w~n', [P1]),
+    format('  Score Atual: ~w~n', [ScoreAtual1]),
+    format('  Score Tendência Piora: ~w~n', [Tendencia1]),
+    format('  Fator Recursos: ~w~n', [FatorRec1]),
+    format('  Fator Decisões: ~w~n', [FatorDec1]),
+    format('  Múltiplas Crises Críticas: ~w~n', [NumCrises1]),
+    format('  SCORE SUCUMBÊNCIA TOTAL: ~w~n', [Score1]),
+    nl,
+    format('PAÍS 2: ~w~n', [P2]),
+    format('  Score Atual: ~w~n', [ScoreAtual2]),
+    format('  Score Tendência Piora: ~w~n', [Tendencia2]),
+    format('  Fator Recursos: ~w~n', [FatorRec2]),
+    format('  Fator Decisões: ~w~n', [FatorDec2]),
+    format('  Múltiplas Crises Críticas: ~w~n', [NumCrises2]),
+    format('  SCORE SUCUMBÊNCIA TOTAL: ~w~n', [Score2]),
+    nl,
+    (Score1 > Score2 ->
+        format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P1, P2]),
+        format('   Diferença no score de sucumbência: ~w pontos~n', [Score1 - Score2])
+    ; Score1 < Score2 ->
+        format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P2, P1]),
+        format('   Diferença no score de sucumbência: ~w pontos~n', [Score2 - Score1])
+    ; Score1 =:= Score2 ->
+        (ScoreAtual1 > ScoreAtual2 ->
+            format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P1, P2]),
+            format('   Empate no score de sucumbência. Decisão por score atual maior.~n')
+        ; ScoreAtual1 < ScoreAtual2 ->
+            format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P2, P1]),
+            format('   Empate no score de sucumbência. Decisão por score atual maior.~n')
+        ; ScoreAtual1 =:= ScoreAtual2 ->
+            (FatorRec1 > FatorRec2 ->
+                format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P1, P2]),
+                format('   Empate em scores. Decisão por recursos mais limitados.~n')
+            ; FatorRec1 < FatorRec2 ->
+                format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P2, P1]),
+                format('   Empate em scores. Decisão por recursos mais limitados.~n')
+            ; FatorRec1 =:= FatorRec2 ->
+                (FatorDec1 > FatorDec2 ->
+                    format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P1, P2]),
+                    format('   Empate em scores e recursos. Decisão por menos decisões disponíveis.~n')
+                ; FatorDec1 < FatorDec2 ->
+                    format('>>> RESULTADO: ~w tem MAIS chances de sucumbir que ~w~n', [P2, P1]),
+                    format('   Empate em scores e recursos. Decisão por menos decisões disponíveis.~n')
+                ; format('>>> RESULTADO: Situação EQUIVALENTE entre ~w e ~w~n', [P1, P2]),
+                  format('   Ambos países têm chances similares de sucumbir.~n')
+                )
+            )
+        )
+    ),
+    write('========================================'), nl,
+    nl,
+    true.
+
 coletar_dados_faltantes(P, Faltantes) :-
     findall(Dado, (
         (\+ crise_economica(P, _, _, _, _, _), Dado = crise_economica);
@@ -267,7 +586,7 @@ validar_dados_completos(P) :-
 melhor_decisao(P, nenhuma, 0) :-
     coletar_dados_faltantes(P, Faltantes),
     Faltantes \= [],
-    Faltantes = [Primeiro | Resto],
+    Faltantes = [Primeiro | Resto],primeira
     format('Impossível amigão: ainda falta ~w', [Primeiro]),
     mostrar_resto_faltantes(Resto),
     format('~n', []),
@@ -476,12 +795,85 @@ explicar_decisao(P, programa_social) :-
     format('  - Apoio da população em nível ~w (baixo apoio exige programas sociais).~n', [Apoio]),
     nl.
 
+explicar_decisao(P, estado_de_emergencia) :-
+    decisao(P, estado_de_emergencia, Meses),
+    decisao_prioridade(estado_de_emergencia, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, estado_de_emergencia, Meses, Prioridade, Impacto),
+    score_pais(P, Score),
+    format('  - Score total do país: ~w (situação crítica, requer ação imediata).~n', [Score]),
+    nl.
+
+explicar_decisao(P, estado_de_calamidade) :-
+    decisao(P, estado_de_calamidade, Meses),
+    decisao_prioridade(estado_de_calamidade, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, estado_de_calamidade, Meses, Prioridade, Impacto),
+    score_pais(P, Score),
+    format('  - Score total do país: ~w (situação extrema, emergência máxima).~n', [Score]),
+    nl.
+
+explicar_decisao(P, medidas_preventivas) :-
+    decisao(P, medidas_preventivas, Meses),
+    decisao_prioridade(medidas_preventivas, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, medidas_preventivas, Meses, Prioridade, Impacto),
+    score_pais(P, Score),
+    format('  - Score total do país: ~w (situação média-alta, medidas preventivas necessárias).~n', [Score]),
+    nl.
+
+explicar_decisao(P, plano_recuperacao_gradual) :-
+    decisao(P, plano_recuperacao_gradual, Meses),
+    decisao_prioridade(plano_recuperacao_gradual, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, plano_recuperacao_gradual, Meses, Prioridade, Impacto),
+    score_pais(P, Score),
+    format('  - Score total do país: ~w (situação grave mas com recursos disponíveis).~n', [Score]),
+    reservas(P, Res),
+    format('  - Reservas em nível ~w (permite plano de recuperação gradual).~n', [Res]),
+    nl.
+
+explicar_decisao(P, pacote_mega_emergencial) :-
+    decisao(P, pacote_mega_emergencial, Meses),
+    decisao_prioridade(pacote_mega_emergencial, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, pacote_mega_emergencial, Meses, Prioridade, Impacto),
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    format('  - Crise econômica com score ~w (crítica, requer pacote mega emergencial).~n', [CE.score]),
+    reservas(P, Res),
+    format('  - Reservas em nível ~w (limitadas, exige pacote maior).~n', [Res]),
+    nl.
+
+explicar_decisao(P, intervencao_multipla) :-
+    decisao(P, intervencao_multipla, Meses),
+    decisao_prioridade(intervencao_multipla, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, intervencao_multipla, Meses, Prioridade, Impacto),
+    perfil_pais(P, Perfil),
+    get_dict(crise_economica, Perfil, CE),
+    get_dict(crise_saude, Perfil, CS),
+    get_dict(crise_seguranca, Perfil, CSe),
+    get_dict(crise_social, Perfil, CSo),
+    SomaCrises is CE.score + CS.score + CSe.score + CSo.score,
+    format('  - Soma dos scores das crises: ~w (múltiplas crises graves simultâneas).~n', [SomaCrises]),
+    format('  - Scores individuais: Econômica=~w, Saúde=~w, Segurança=~w, Social=~w~n', 
+           [CE.score, CS.score, CSe.score, CSo.score]),
+    nl.
+
+explicar_decisao(P, lockdown_total) :-
+    decisao(P, lockdown_total, Meses),
+    decisao_prioridade(lockdown_total, Prioridade, Impacto),
+    explicar_decisao_cabecalho(P, lockdown_total, Meses, Prioridade, Impacto),
+    perfil_pais(P, Perfil),
+    get_dict(crise_saude, Perfil, CS),
+    format('  - Crise de saúde com score ~w (extrema, requer lockdown total).~n', [CS.score]),
+    apoio_populacao(P, Apoio),
+    format('  - Apoio da população em nível ~w (permite medidas extremas).~n', [Apoio]),
+    nl.
+
 explicar_decisao(P, Outra) :-
     \+ member(Outra, [lockdown_parcial, intervencao_economica, pacote_emergencial,
                       reforco_hospitais, chamar_onu, reforco_policial,
                       deslocar_tropas, reforma_infraestrutura, plano_estabilizacao,
                       acordo_internacional, contencao_social, reforma_tributaria,
-                      campanha_confianca, programa_social]),
+                      campanha_confianca, programa_social, estado_de_emergencia,
+                      estado_de_calamidade, medidas_preventivas, plano_recuperacao_gradual,
+                      pacote_mega_emergencial, intervencao_multipla, lockdown_total]),
     decisao(P, Outra, Meses),
     decisao_prioridade(Outra, Prioridade, Impacto),
     explicar_decisao_cabecalho(P, Outra, Meses, Prioridade, Impacto),
