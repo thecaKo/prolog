@@ -439,22 +439,22 @@ menu_exemplos :-
     nl,
     
     (   Opcao == 1
-    ->  consult('teste_lockdown_parcial.pl'),
+    ->  consult('testes/teste_lockdown_parcial.pl'),
         executar_teste(pais_exemplo)
     ;   Opcao == 2
-    ->  consult('teste_intervencao_economica.pl'),
+    ->  consult('testes/teste_intervencao_economica.pl'),
         executar_teste(pais_exemplo)
     ;   Opcao == 3
-    ->  consult('teste_chamar_onu.pl'),
+    ->  consult('testes/teste_chamar_onu.pl'),
         executar_teste(pais_exemplo)
     ;   Opcao == 4
-    ->  consult('teste_reforma_infraestrutura.pl'),
+    ->  consult('testes/teste_reforma_infraestrutura.pl'),
         executar_teste(pais_exemplo)
     ;   Opcao == 5
-    ->  consult('teste_plano_estabilizacao.pl'),
+    ->  consult('testes/teste_plano_estabilizacao.pl'),
         executar_teste(pais_exemplo)
     ;   Opcao == 6
-    ->  consult('exemplo_multiplos_impactos.pl'),
+    ->  consult('testes/exemplo_multiplos_impactos.pl'),
         executar_exemplos
     ;   write('Opção inválida!'), nl
     ),

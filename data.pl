@@ -240,7 +240,6 @@ mostrar_resto_faltantes([F | Resto]) :-
     format(', ~w', [F]),
     mostrar_resto_faltantes(Resto).
 
-% Validação que verifica se todos os dados estão presentes
 validar_dados_completos(P) :-
     coletar_dados_faltantes(P, Faltantes),
     Faltantes = [],
