@@ -390,14 +390,12 @@ explicar_decisao_cabecalho(_P, Acao, Meses, Prioridade, Impacto) :-
     format('Prioridade: ~w, Impacto: ~w~n', [Prioridade, Impacto]),
     write('Motivos:'), nl.
 
-% Cláusula para quando Acao é variável - não permitida
 explicar_decisao(P, Acao) :-
     var(Acao),
     format('Erro: você deve especificar uma ação específica. Use explicar_decisao(~w, nome_da_acao).~n', [P]),
     !,
     fail.
 
-% Cláusula para quando a decisão não existe
 explicar_decisao(P, Acao) :-
     \+ var(Acao),
     \+ decisao(P, Acao, _),

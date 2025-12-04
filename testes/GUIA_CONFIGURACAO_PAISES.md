@@ -60,7 +60,7 @@ true.
 
 ### Comandos:
 
-```prolog
+```prologclear
 % Configurar crise econômica (alto, alta, critica, alto, explosiva)
 ?- assertz(crise_economica(brasil, alto, alta, critica, alto, explosiva)).
 
